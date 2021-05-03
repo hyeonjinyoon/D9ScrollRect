@@ -5,6 +5,12 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+class D9Position
+{
+    public Vector2 position;
+    public float time;
+}
+
 public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, IDragHandler, IPointerDownHandler, IInitializePotentialDragHandler
 {
     public RectTransform viewPort;
@@ -15,14 +21,9 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
     public bool horizontal = true;
     public bool vertical = true;
 
-    private const float setSpeedMultiplier = 100;
-    private const float setSpeedDecreaseDuration = 20;
-
-    [SerializeField] private float _speedMultiplier = 1;
-    [SerializeField] private float _speedDecreaseDuration = 1;
-
-    public float speedMultiplier => _speedMultiplier * setSpeedMultiplier;
-    public float speedDecreaseDuration => _speedDecreaseDuration * setSpeedDecreaseDuration;
+    public float speedMultiplier = 80;
+    public float speedDecreaseDuration = 30;
+    [Range(1,50)] public float aaa = 12;
 
     Vector2 clickPosition;
     Vector2 endPosition;
@@ -32,12 +33,16 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
     public Vector2 speed { get; private set; }
 
     bool isTouching = false;
-    Vector2 prevFrameMousePosition;
 
     Canvas parentCanvas;
 
+    List<D9Position> prevPositions = new List<D9Position>();
+    const int BACK_FRAME = 3;
+
     private void OnEnable()
     {
+        viewPort.pivot = new Vector2(0.5f, 0.5f);
+
         if (onActiveInitPosition)
         {
             var contentUpPositionY = (1 - content.pivot.y) * content.rect.height;
@@ -48,23 +53,36 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
 
         speed = Vector2.zero;
 
-        a = Time.time;
+        time = Time.time;
     }
 
     private void Start()
     {
         contentOriginLocalPosition = content.transform.localPosition;
+
+        for (int i = 0; i < BACK_FRAME; i++)
+        {
+            var a = new D9Position
+            {
+                time = Time.time,
+                position = Vector2.zero
+            };
+            prevPositions.Add(a);
+        }
     }
 
-    float a = 0;
+    float time = 0;
 
     private void Update()
     {
         content.transform.position += (Vector3)speed * Time.deltaTime;
 
-        while (a < Time.time)
+        while (time < Time.time)
         {
             speed -= speed / speedDecreaseDuration;
+
+            if (speed.sqrMagnitude < 0.001f)
+                speed = Vector2.zero;
 
             if (vertical)
             {
@@ -73,14 +91,14 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
 
                 if (content.localPosition.y + contentUpPositionY < viewPort.localPosition.y + viewPort.rect.height / 2)
                 {
-                    var a = ((viewPort.localPosition + new Vector3(0, viewPort.rect.height / 2)) - (content.localPosition + new Vector3(0, contentUpPositionY))) / 12f;
+                    var a = ((viewPort.localPosition + new Vector3(0, viewPort.rect.height / 2)) - (content.localPosition + new Vector3(0, contentUpPositionY))) / aaa;
                     content.localPosition += new Vector3(0, a.y);
                     speed -= speed / speedDecreaseDuration;
                 }
 
                 if (content.localPosition.y + contentDownPositionY > viewPort.localPosition.y - viewPort.rect.height / 2)
                 {
-                    var a = ((viewPort.localPosition - new Vector3(0, viewPort.rect.height / 2)) - (content.localPosition + new Vector3(0, contentDownPositionY))) / 12f;
+                    var a = ((viewPort.localPosition - new Vector3(0, viewPort.rect.height / 2)) - (content.localPosition + new Vector3(0, contentDownPositionY))) / aaa;
                     content.localPosition += new Vector3(0, a.y);
                     speed -= speed / speedDecreaseDuration;
                 }
@@ -93,23 +111,22 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
 
                 if (content.localPosition.x + contentUpPositionX < viewPort.localPosition.x + viewPort.rect.width / 2)
                 {
-                    var a = ((viewPort.localPosition + new Vector3(viewPort.rect.width / 2, 0)) - (content.localPosition + new Vector3(contentUpPositionX, 0))) / 12f;
+                    var a = ((viewPort.localPosition + new Vector3(viewPort.rect.width / 2, 0)) - (content.localPosition + new Vector3(contentUpPositionX, 0))) / aaa;
                     content.localPosition += new Vector3(a.x, 0);
                     speed -= speed / speedDecreaseDuration;
                 }
 
                 if (content.localPosition.x + contentDownPositionX > viewPort.localPosition.x - viewPort.rect.width / 2)
                 {
-                    var a = ((viewPort.localPosition - new Vector3(viewPort.rect.width / 2, 0)) - (content.localPosition + new Vector3(contentDownPositionX, 0))) / 12f;
+                    var a = ((viewPort.localPosition - new Vector3(viewPort.rect.width / 2, 0)) - (content.localPosition + new Vector3(contentDownPositionX, 0))) / aaa;
                     content.localPosition += new Vector3(a.x, 0);
                     speed -= speed / speedDecreaseDuration;
                 }
             }
-
-            a += 1 / 120f;
+            time += 1 / 120f;
         }
 
-        a = Time.time;
+        time = Time.time;
 
         if (isTouching)
         {
@@ -118,7 +135,58 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
             else
                 content.transform.position = (Vector3)contentStartPosition + (Camera.main.ScreenToWorldPoint(Input.mousePosition) - Camera.main.ScreenToWorldPoint(clickPosition));
 
-            prevFrameMousePosition = Input.mousePosition;
+            prevPositions[0].position = Input.mousePosition;
+            prevPositions[0].time = Time.time;
+
+            for (int i = BACK_FRAME - 1; i > 0; i--)
+            {
+                prevPositions[i].position = prevPositions[i - 1].position;
+                prevPositions[i].time = prevPositions[i - 1].time;
+            }
+
+            if (aaa == 1)
+            {
+                if (vertical)
+                {
+                    var contentDownPositionY = -(content.pivot.y) * content.rect.height;
+                    var contentUpPositionY = (1 - content.pivot.y) * content.rect.height;
+
+                    if (content.localPosition.y + contentUpPositionY < viewPort.localPosition.y + viewPort.rect.height / 2)
+                    {
+                        var a = ((viewPort.localPosition + new Vector3(0, viewPort.rect.height / 2)) - (content.localPosition + new Vector3(0, contentUpPositionY))) / aaa;
+                        content.localPosition += new Vector3(0, a.y);
+                        speed -= speed / speedDecreaseDuration;
+                    }
+
+                    if (content.localPosition.y + contentDownPositionY > viewPort.localPosition.y - viewPort.rect.height / 2)
+                    {
+                        var a = ((viewPort.localPosition - new Vector3(0, viewPort.rect.height / 2)) - (content.localPosition + new Vector3(0, contentDownPositionY))) / aaa;
+                        content.localPosition += new Vector3(0, a.y);
+                        speed -= speed / speedDecreaseDuration;
+                    }
+                }
+
+                if (horizontal)
+                {
+                    var contentDownPositionX = -(content.pivot.x) * content.rect.width;
+                    var contentUpPositionX = (1 - content.pivot.x) * content.rect.width;
+
+                    if (content.localPosition.x + contentUpPositionX < viewPort.localPosition.x + viewPort.rect.width / 2)
+                    {
+                        var a = ((viewPort.localPosition + new Vector3(viewPort.rect.width / 2, 0)) - (content.localPosition + new Vector3(contentUpPositionX, 0))) / aaa;
+                        content.localPosition += new Vector3(a.x, 0);
+                        speed -= speed / speedDecreaseDuration;
+                    }
+
+                    if (content.localPosition.x + contentDownPositionX > viewPort.localPosition.x - viewPort.rect.width / 2)
+                    {
+                        var a = ((viewPort.localPosition - new Vector3(viewPort.rect.width / 2, 0)) - (content.localPosition + new Vector3(contentDownPositionX, 0))) / aaa;
+                        content.localPosition += new Vector3(a.x, 0);
+                        speed -= speed / speedDecreaseDuration;
+                    }
+                }
+            }
+
         }
 
         if (!horizontal)
@@ -164,11 +232,13 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
         endPosition = Input.mousePosition;
 
         if (parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
-            speed = endPosition - prevFrameMousePosition;
+            speed = endPosition - prevPositions[BACK_FRAME - 1].position;
         else
-            speed = Camera.main.ScreenToWorldPoint(endPosition) - Camera.main.ScreenToWorldPoint(prevFrameMousePosition);
+            speed = Camera.main.ScreenToWorldPoint(endPosition) - Camera.main.ScreenToWorldPoint(prevPositions[BACK_FRAME - 1].position);
 
-        speed *= speedMultiplier;
+        var t = ((1 / 60f) / (Time.time - prevPositions[BACK_FRAME - 1].time));
+
+        speed *= speedMultiplier * t;
         isTouching = false;
     }
 
@@ -177,7 +247,12 @@ public class D9ScrollRect : MonoBehaviour, IBeginDragHandler, IEndDragHandler, I
         speed = Vector2.zero;
         contentStartPosition = content.transform.position;
         clickPosition = Input.mousePosition;
-        prevFrameMousePosition = clickPosition;
+
+        for (int i = 0; i < BACK_FRAME; i++)
+        {
+            prevPositions[i].position = Input.mousePosition;
+            prevPositions[i].time = Time.time;
+        }
 
         DoForParents<IInitializePotentialDragHandler>((parent) => { parent.OnInitializePotentialDrag(eventData); });
     }
