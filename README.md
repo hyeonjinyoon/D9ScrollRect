@@ -8,7 +8,7 @@
 * 움직인 거리 및 시간에 알맞게 가속도 적용
 
 ## 웹 빌드 체험
-https://hjine01.github.io/d9_scroll_rect
+[https://hyeonjinyoon.github.io/d9_scroll_rect](https://deok9.com/d9_scroll_rect)
 
 ## 영상
 https://www.youtube.com/watch?v=1hPIohduLQk
