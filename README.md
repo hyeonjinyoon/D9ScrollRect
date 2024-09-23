@@ -11,12 +11,9 @@
 [https://hyeonjinyoon.github.io/d9_scroll_rect](https://deok9.com/d9_scroll_rect)
 
 ## 영상
-https://www.youtube.com/watch?v=1hPIohduLQk
-
-[![Video Label](http://img.youtube.com/vi/1hPIohduLQk/0.jpg)](https://www.youtube.com/watch?v=1hPIohduLQk)
+[https://www.youtube.com/watch?v=1hPIohduLQk]([https://deok9.com/d9_scroll_rect](https://www.youtube.com/watch?v=1hPIohduLQk))
 
 ## 적용 방법
-
 [다운로드](https://github.com/hjine01/D9ScrollRect/blob/main/D9ScrollRect.cs)하여
 
 기존 ScrollRect 오브젝트에 추가한뒤 똑같이 세팅을 해주시면 됩니다
